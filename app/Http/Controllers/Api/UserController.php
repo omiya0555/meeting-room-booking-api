@@ -8,42 +8,66 @@ use App\Models\User;
 class UserController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * userの一覧を表示
      */
     public function index()
     {
-        return User::all(); // user一覧を返す
+        return User::all(); 
     }
 
     /**
-     * Store a newly created resource in storage.
+     * 新規ユーザーを登録
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8',
+        ]);
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+        ]);
+        return response()->json($user, 201);
     }
 
     /**
-     * Display the specified resource.
+     * 指定されたIDのユーザーを表示
      */
-    public function show(string $id)
+    public function show($id)
     {
-        //
+        return User::findOrFail($id);
     }
 
     /**
-     * Update the specified resource in storage.
+     * ユーザー情報を更新
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request,$id)
     {
-        //
+        $user = User::findOrFail($id);
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
+            'password' => 'sometimes|required|string|min:8',
+        ]);
+        $user->update([
+            'name' => $validated['name'] ?? $user->name,
+            'email' => $validated['email'] ?? $user->email,
+            'password' => isset($validated['password']) ? bcrypt($validated['password']) : $user->password,
+        ]);
+        return response()->json($user, 200);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * ユーザーの削除
      */
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        //
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return response()->json(null, 204);
     }
 }
