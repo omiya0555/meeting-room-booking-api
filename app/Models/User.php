@@ -7,9 +7,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+// 追加させるのを忘れて前回のAuthControllerを使用していため、
+// 500 server errorが発生していたが、HasApiTokensを追加する事で
+// createTokenメソッドを使用できるようになった。
+use Laravel\Sanctum\HasApiTokens;
+
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
