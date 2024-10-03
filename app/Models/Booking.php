@@ -9,6 +9,15 @@ class Booking extends Model
 {
     use HasFactory;
 
+    // Fillableプロパティ
+    protected $fillable = [
+        'room_id',
+        'start_time',
+        'end_time',
+        'status_id',
+        'user_id',
+    ];
+
     // BookingとUser: 各予約は1人の申請者に属する（belongsTo）
     public function user()
     {
@@ -38,4 +47,5 @@ class Booking extends Model
     {
         return $this->hasMany(BookingHistory::class);
     }
+
 }
