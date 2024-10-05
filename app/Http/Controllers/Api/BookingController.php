@@ -95,13 +95,18 @@ class BookingController extends Controller
         // トランザクション処理
         try {
             $booking = Booking::findOrFail($id);
-            // トランザクション内でstatusの更新を検証するため
+            
+            // 変更前のデータを保持
             $status_id_before = $booking->status_id;
+            $start_time_before = $booking->start_time;
+            $end_time_before = $booking->end_time;
 
-            DB::transaction(function () use ($request, $booking, $status_id_before) {
+            DB::transaction(function () use ($request, $booking, $status_id_before, $start_time_before, $end_time_before) {
+                // 予約情報の更新
                 $booking->update($request->only(['room_id', 'start_time', 'end_time', 'status_id']));
-                $status_id_after = $booking->status_id; // statusの更新を検証するため
-                
+                $status_id_after = $booking->status_id;
+                $start_time_after = $booking->start_time;
+                $end_time_after = $booking->end_time;                
                 // 参加者の更新
                 if (isset($request->participants)) {
                     // 参加者の削除
@@ -124,6 +129,25 @@ class BookingController extends Controller
                         'status_before' => $status_id_before,
                         'status_after'  => $status_id_after
                     ]);
+                }
+
+                // 予約期間が変更された場合、カレンダーイベントを更新
+                if ($start_time_before !== $start_time_after || $end_time_before !== $end_time_after) {
+                    $calendarEvent = CalendarEvent::where('booking_id', $booking->id)->first();
+                    if ($calendarEvent) {
+                        // 既存のカレンダーイベントを更新
+                        $calendarEvent->update([
+                            'event_start'   => $start_time_after,
+                            'event_end'     => $end_time_after,
+                        ]);
+                    } else {
+                        // カレンダーイベントが存在しない場合、新規作成
+                        CalendarEvent::create([
+                            'booking_id'    => $booking->id,
+                            'event_start'   => $start_time_after,
+                            'event_end'     => $end_time_after,
+                        ]);
+                    }
                 }
             });
 
