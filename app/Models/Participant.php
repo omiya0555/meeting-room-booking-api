@@ -11,6 +11,12 @@ class Participant extends Model
 {
     use HasFactory;
 
+    // Fillableプロパティ
+    protected $fillable = [
+        'booking_id',
+        'user_id',
+    ];
+
     // 各参加者は一つの予約に属する。
     public function booking()
     {

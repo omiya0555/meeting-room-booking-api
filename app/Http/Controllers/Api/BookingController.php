@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\BookingHistory;
 use App\Models\Participant;
+use App\Models\CalendarEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,17 +20,18 @@ class BookingController extends Controller
         return Booking::with(['participants', 'status'])->get();
     }
 
-    // 新しい予約を作成
+    // 予約を作成
     public function store(Request $request)
     {
         // バリデーション
         $request->validate([
-            'room_id' => 'required|exists:rooms,id',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time',
-            'user_id' => 'required|exists:users,id',
-            'participants' => 'required|array|min:1',
-            'participants.*.user_id' => 'exists:users,id',
+            'room_id'                   => 'required|exists:rooms,id',       // 外部キーとして roomsに存在するIDか確認
+            'start_time'                => 'required|date',                  // date形式か
+            'end_time'                  => 'required|date|after:start_time', // start_timeより後の日付か確認
+            'user_id'                   => 'required|exists:users,id',       // 申請者のユーザーIDがusersテーブルに存在するか
+            'participants'              => 'required|array|min:1',           // 配列で、最小1つの要素が必要
+            'participants.*.user_id'    => 'required|exists:users,id',                // 参加者のユーザーIDがusersテーブルに存在するか
+            'event_title'               => 'required|max:30'
         ]);
 
         // トランザクション処理
@@ -36,26 +39,35 @@ class BookingController extends Controller
             $booking = DB::transaction(function () use ($request) {
                 // 予約の作成
                 $booking = Booking::create([
-                    'room_id' => $request->room_id,
-                    'start_time' => $request->start_time,
-                    'end_time' => $request->end_time,
-                    'status_id' => 1,
-                    'user_id' => $request->user_id,
+                    'room_id'       => $request->room_id,
+                    'start_time'    => $request->start_time,
+                    'end_time'      => $request->end_time,
+                    'status_id'     => 1,  // 初期ステータス（承認待ち）
+                    'user_id'       => $request->user_id,
                 ]);
-
-                // 参加者の追加
+    
+                // 参加者の作成
                 foreach ($request->participants as $participant) {
                     Participant::create([
-                        'booking_id' => $booking->id,
-                        'user_id' => $participant['user_id'], // 修正：user_idを取得
+                        'booking_id'    => $booking->id,
+                        'user_id'       => $participant['user_id'], 
                     ]);
                 }
 
+                // カレンダーイベントの作成
+                CalendarEvent::create([
+                    'booking_id'    => $booking->id,
+                    'event_title'   => $request->event_title,
+                    'event_start'   => $booking->start_time,
+                    'event_end'     => $booking->end_time,
+                ]);
+    
                 return $booking;
             });
-
+    
             return response()->json(['message' => 'Booking created successfully!', 'booking' => $booking], 201);
         } catch (\Exception $e) {
+            // トランザクション内で例外が発生した場合にエラーレスポンスを返す
             return response()->json(['message' => 'Booking creation failed!', 'error' => $e->getMessage()], 500);
         }
     }
@@ -83,9 +95,13 @@ class BookingController extends Controller
         // トランザクション処理
         try {
             $booking = Booking::findOrFail($id);
-            DB::transaction(function () use ($request, $booking) {
-                $booking->update($request->only(['room_id', 'start_time', 'end_time', 'status_id']));
+            // トランザクション内でstatusの更新を検証するため
+            $status_id_before = $booking->status_id;
 
+            DB::transaction(function () use ($request, $booking, $status_id_before) {
+                $booking->update($request->only(['room_id', 'start_time', 'end_time', 'status_id']));
+                $status_id_after = $booking->status_id; // statusの更新を検証するため
+                
                 // 参加者の更新
                 if (isset($request->participants)) {
                     // 参加者の削除
@@ -98,6 +114,16 @@ class BookingController extends Controller
                             'user_id' => $participant['user_id'],
                         ]);
                     }
+                }
+
+                // statusの更新が発生した場合、booking_historiesテーブルに記録
+                // コードをシンプルにするため、トランザクション内で条件分岐と作成を実行
+                if ( $status_id_before !== $status_id_after ){
+                    BookingHistory::create([
+                        'booking_id'    => $booking->id,
+                        'status_before' => $status_id_before,
+                        'status_after'  => $status_id_after
+                    ]);
                 }
             });
 

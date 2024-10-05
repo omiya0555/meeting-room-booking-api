@@ -10,6 +10,14 @@ class CalendarEvent extends Model
 {
     use HasFactory;
 
+    // Fillableプロパティ
+    protected $fillable = [
+        'booking_id',
+        'event_title',
+        'event_start',
+        'event_end',
+    ];
+
     // 各カレンダーイベントは一つの予約に属する。
     public function booking()
     {

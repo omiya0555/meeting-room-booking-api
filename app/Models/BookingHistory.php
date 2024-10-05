@@ -10,6 +10,13 @@ class BookingHistory extends Model
 {
     use HasFactory;
 
+    // Fillableプロパティ
+    protected $fillable = [
+        'booking_id',
+        'status_before',
+        'status_after',
+    ];
+
     // BookingHistoryとBooking: 各予約履歴は一つの予約に属する。
     public function booking()
     {
