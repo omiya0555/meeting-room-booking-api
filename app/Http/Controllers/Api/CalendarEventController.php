@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\CalendarEvent;
 
 class CalendarEventController extends Controller
 {
@@ -11,7 +12,7 @@ class CalendarEventController extends Controller
      */
     public function index()
     {
-        //
+        return CalendarEvent::all();
     }
 
     /**
@@ -27,7 +28,8 @@ class CalendarEventController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $calendarEvent = CalendarEvent::findOrFail($id);
+        return response()->json($calendarEvent);
     }
 
     /**

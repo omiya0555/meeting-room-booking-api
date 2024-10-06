@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\BookingHistory;
 
 class BookingHistoryController extends Controller
 {
@@ -11,7 +12,7 @@ class BookingHistoryController extends Controller
      */
     public function index()
     {
-        //
+        return BookingHistory::all();
     }
 
     /**
@@ -27,7 +28,8 @@ class BookingHistoryController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $bookingHistories = BookingHistory::findOrFail($id);
+        return response()->json($bookingHistories);
     }
 
     /**

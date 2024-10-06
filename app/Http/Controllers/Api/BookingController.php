@@ -30,7 +30,7 @@ class BookingController extends Controller
             'end_time'                  => 'required|date|after:start_time', // start_timeより後の日付か確認
             'user_id'                   => 'required|exists:users,id',       // 申請者のユーザーIDがusersテーブルに存在するか
             'participants'              => 'required|array|min:1',           // 配列で、最小1つの要素が必要
-            'participants.*.user_id'    => 'required|exists:users,id',                // 参加者のユーザーIDがusersテーブルに存在するか
+            'participants.*.user_id'    => 'required|exists:users,id',       // 参加者のユーザーIDがusersテーブルに存在するか
             'event_title'               => 'required|max:30'
         ]);
 
@@ -42,7 +42,7 @@ class BookingController extends Controller
                     'room_id'       => $request->room_id,
                     'start_time'    => $request->start_time,
                     'end_time'      => $request->end_time,
-                    'status_id'     => 1,  // 初期ステータス（承認待ち）
+                    'status_id'     => 1, //初期ステータス（承認待ち）
                     'user_id'       => $request->user_id,
                 ]);
     
@@ -84,11 +84,11 @@ class BookingController extends Controller
     {
         // バリデーション
         $request->validate([
-            'room_id' => 'sometimes|required|exists:rooms,id',
-            'start_time' => 'sometimes|required|date',
-            'end_time' => 'sometimes|required|date|after:start_time',
-            'status_id' => 'sometimes|required|exists:booking_statuses,id',
-            'participants' => 'sometimes|array|min:1',
+            'room_id'                => 'sometimes|required|exists:rooms,id',
+            'start_time'             => 'sometimes|required|date',
+            'end_time'               => 'sometimes|required|date|after:start_time',
+            'status_id'              => 'sometimes|required|exists:booking_statuses,id',
+            'participants'           => 'sometimes|array|min:1',
             'participants.*.user_id' => 'exists:users,id',
         ]);
 
@@ -97,16 +97,16 @@ class BookingController extends Controller
             $booking = Booking::findOrFail($id);
             
             // 変更前のデータを保持
-            $status_id_before = $booking->status_id;
-            $start_time_before = $booking->start_time;
-            $end_time_before = $booking->end_time;
+            $status_id_before   = $booking->status_id;
+            $start_time_before  = $booking->start_time;
+            $end_time_before    = $booking->end_time;
 
             DB::transaction(function () use ($request, $booking, $status_id_before, $start_time_before, $end_time_before) {
                 // 予約情報の更新
                 $booking->update($request->only(['room_id', 'start_time', 'end_time', 'status_id']));
-                $status_id_after = $booking->status_id;
-                $start_time_after = $booking->start_time;
-                $end_time_after = $booking->end_time;                
+                $status_id_after    = $booking->status_id;
+                $start_time_after   = $booking->start_time;
+                $end_time_after     = $booking->end_time;                
                 // 参加者の更新
                 if (isset($request->participants)) {
                     // 参加者の削除
@@ -115,8 +115,8 @@ class BookingController extends Controller
                     // 新しい参加者の追加
                     foreach ($request->participants as $participant) {
                         Participant::create([
-                            'booking_id' => $booking->id,
-                            'user_id' => $participant['user_id'],
+                            'booking_id'    => $booking->id,
+                            'user_id'       => $participant['user_id'],
                         ]);
                     }
                 }
@@ -127,7 +127,7 @@ class BookingController extends Controller
                     BookingHistory::create([
                         'booking_id'    => $booking->id,
                         'status_before' => $status_id_before,
-                        'status_after'  => $status_id_after
+                        'status_after'  => $status_id_after,
                     ]);
                 }
 
@@ -170,7 +170,8 @@ class BookingController extends Controller
 
             return response()->json(['message' => 'Booking deleted successfully!'], 200);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Booking deletion failed!', 'error' => $e->getMessage()], 500);
+            return response()->json(
+                ['message' => 'Booking deletion failed!', 'error' => $e->getMessage()],500);
         }
     }
 }

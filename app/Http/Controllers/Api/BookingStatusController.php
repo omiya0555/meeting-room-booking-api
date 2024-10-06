@@ -28,7 +28,8 @@ class BookingStatusController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $bookingStatus = BookingStatus::findOrFail($id);
+        return response()->json($bookingStatus);
     }
 
     /**

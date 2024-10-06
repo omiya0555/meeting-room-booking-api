@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Room;
 
 class RoomController extends Controller
 {
@@ -11,7 +12,7 @@ class RoomController extends Controller
      */
     public function index()
     {
-        //
+        return Room::all();
     }
 
     /**
@@ -27,7 +28,8 @@ class RoomController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $room = Room::findOrFail($id);
+        return response()->json($room);
     }
 
     /**
