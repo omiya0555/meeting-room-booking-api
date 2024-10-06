@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\CalendarEvent;
+use Carbon\Carbon;
 
 class CalendarEventController extends Controller
 {
@@ -46,5 +47,30 @@ class CalendarEventController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    // 月ごとのイベント情報を返す
+    public function getEventsByMonth(Request $request)
+    {
+        $request->validate([
+            'month' => 'required|date_format:Y-m'
+        ]);
+
+        // 月初と月末を設定
+        $month = $request->month;
+        // carbonライブラリのcreateFromFormatで$monthをY-m形式にパースし、
+        // startOfMonthメソッドでその月の月初日を取得。指定月の１日の日付オブジェクトが格納
+        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        // $startDateをコピーし、その月の月末日を取得。copy()でオブジェクトの複製。
+        $endDate = $startDate->copy()->endOfMonth();
+
+        // 月内のイベントを取得
+        // start_dateが$startDateとendDateの間にあるイベントを取得
+        // end_date  が$startDateとendDateの間にあるイベントを取得
+        $events = CalendarEvent::whereBetween('event_start', [$startDate, $endDate])
+                               ->orWhereBetween('event_end', [$startDate, $endDate])
+                               ->get();
+
+        return response()->json($events);
     }
 }
