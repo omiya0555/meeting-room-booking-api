@@ -46,10 +46,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/booking/history/{id}', [BookingHistoryController::class, 'destroy']); 
 
     // calendar events情報
-    Route::get('/calendar', [CalendarEventController::class, 'index']); 
+    Route::get('/calendar', [CalendarEventController::class, 'getEvents']);
     Route::get('/calendar/{id}', [CalendarEventController::class, 'show']);
     // 月ごとの events情報
-    Route::get('/calendar', [CalendarEventController::class, 'getEventsByMonth']);
+    Route::get('/calendar/month', [CalendarEventController::class, 'getEventsByMonth']);
     Route::post('/calendar', [CalendarEventController::class, 'store']);
     Route::put('/calendar/{id}', [CalendarEventController::class, 'update']);
     Route::delete('/calendar/{id}', [CalendarEventController::class, 'destroy']);

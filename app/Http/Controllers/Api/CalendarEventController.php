@@ -8,6 +8,30 @@ use Carbon\Carbon;
 
 class CalendarEventController extends Controller
 {
+
+    public function getEvents(Request $request)
+    {
+        try {
+            $start = Carbon::parse($request->query('start'));
+            $end = Carbon::parse($request->query('end'));
+    
+            $events = CalendarEvent::whereBetween('event_start', [$start, $end])
+                            ->orWhereBetween('event_end', [$start, $end])
+                            ->get();
+            $formattedEvents = $events->map(function ($event) {
+                return [
+                    'title' => $event->event_title,
+                    'start' => $event->event_start,
+                    'end' => $event->event_end,
+                ];
+            });
+    
+            return response()->json($formattedEvents);
+    
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch events'], 500);
+        }
+    }
     /**
      * Display a listing of the resource.
      */
