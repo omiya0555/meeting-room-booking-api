@@ -180,7 +180,7 @@ class BookingController extends Controller
         try {
             $booking = Booking::findOrFail($id);
             DB::transaction(function () use ($booking) {
-                $booking->participant()->delete();
+                $booking->participants()->delete();
                 $booking->delete();
             });
 
