@@ -80,7 +80,6 @@ class BookingController extends Controller
         return response()->json($booking);
     }
 
-    // 予約を更新
     public function update(Request $request, $id)
     {
         // バリデーション
@@ -93,7 +92,7 @@ class BookingController extends Controller
             'participants.*.user_id' => 'exists:users,id',
             'event_title'            => 'required|max:30',
         ]);
-
+    
         // トランザクション処理
         try {
             $booking = Booking::findOrFail($id);
@@ -102,40 +101,53 @@ class BookingController extends Controller
             $status_id_before   = $booking->status_id;
             $start_time_before  = $booking->start_time;
             $end_time_before    = $booking->end_time;
-
+    
             DB::transaction(function () use ($request, $booking, $status_id_before, $start_time_before, $end_time_before) {
                 // 予約情報の更新
                 $booking->update($request->only(['room_id', 'start_time', 'end_time', 'status_id', 'event_title']));
                 $status_id_after    = $booking->status_id;
                 $start_time_after   = $booking->start_time;
-                $end_time_after     = $booking->end_time;   
-                // 参加者の更新
+                $end_time_after     = $booking->end_time;
+    
+                // 参加者の更新処理
                 if (isset($request->participants)) {
+                    // 現在の参加者IDを取得
+                    $existingParticipants = $booking->participants()->pluck('user_id')->toArray();
+                    $newParticipants = array_column($request->participants, 'user_id');
+    
+                    // 削除する参加者を特定
+                    $participantsToRemove = array_diff($existingParticipants, $newParticipants);
+                    // 追加する参加者を特定
+                    $participantsToAdd = array_diff($newParticipants, $existingParticipants);
+    
                     // 参加者の削除
-                    $booking->participants()->delete();
-
+                    if (!empty($participantsToRemove)) {
+                        Participant::where('booking_id', $booking->id)
+                            ->whereIn('user_id', $participantsToRemove)
+                            ->delete();
+                    }
+    
                     // 新しい参加者の追加
-                    foreach ($request->participants as $participant) {
+                    foreach ($participantsToAdd as $user_id) {
                         Participant::create([
                             'booking_id'    => $booking->id,
-                            'user_id'       => $participant['user_id'],
+                            'user_id'       => $user_id,
                         ]);
                     }
                 }
-
+    
                 // statusの更新が発生した場合、booking_historiesテーブルに記録
-                // コードをシンプルにするため、トランザクション内で条件分岐と作成を実行
-                if ( $status_id_before !== $status_id_after ){
+                if ($status_id_before !== $status_id_after) {
                     BookingHistory::create([
                         'booking_id'    => $booking->id,
                         'status_before' => $status_id_before,
                         'status_after'  => $status_id_after,
                     ]);
                 }
-
-                // 予約期間が変更された場合、カレンダーイベントを更新
-                if ($start_time_before !== $start_time_after || $end_time_before !== $end_time_after) {
-                    $calendarEvent = CalendarEvent::where('booking_id', $booking->id)->first();
+    
+                // 予約期間やタイトルが変更された場合、カレンダーイベントを更新
+                $calendarEvent = CalendarEvent::where('booking_id', $booking->id)->first();
+                if ($start_time_before !== $start_time_after || $end_time_before !== $end_time_after || $request->event_title !== $booking->event_title) {
                     if ($calendarEvent) {
                         // 既存のカレンダーイベントを更新
                         $calendarEvent->update([
@@ -143,7 +155,6 @@ class BookingController extends Controller
                             'event_end'     => $end_time_after,
                             'event_title'   => $request->event_title,
                         ]);
-
                     } else {
                         // カレンダーイベントが存在しない場合、新規作成
                         CalendarEvent::create([
@@ -155,7 +166,7 @@ class BookingController extends Controller
                     }
                 }
             });
-
+    
             return response()->json(['message' => 'Booking updated successfully!', 'booking' => $booking], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Booking update failed!', 'error' => $e->getMessage()], 500);

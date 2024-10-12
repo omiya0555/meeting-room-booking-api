@@ -35,7 +35,7 @@ class Booking extends Model
     }
 
     // BookingとParticipant: 各予約は複数の参加者を持つことができる
-    public function participant()
+    public function participants()
     {
         return $this->hasMany(Participant::class);
     }

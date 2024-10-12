@@ -16,7 +16,7 @@ class CalendarEventController extends Controller
             $end = Carbon::parse($request->query('end'));
 
             // CalendarEventと、そのBookingおよびRoom情報を取得
-            $events = CalendarEvent::with(['booking.room','booking.participant']) // BookingとRoomをロード
+            $events = CalendarEvent::with(['booking.room','booking.participants']) // BookingとRoomをロード
                             ->whereBetween('event_start', [$start, $end])
                             ->orWhereBetween('event_end', [$start, $end])
                             ->get();
@@ -31,7 +31,7 @@ class CalendarEventController extends Controller
                     'end'           => $event->event_end,
                     'room'          => $event->booking->room->room_name, // 関連するRoomの名前
                     'room_id'       => $event->booking->room->id, // 関連するRoomの名前
-                    'participants'  => $event->booking->participant, // 参加者情報
+                    'participants'  => $event->booking->participants, // 参加者情報
                 ];
             });
 
