@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\BookingHistory;
+use App\Models\Room;
 use App\Models\Participant;
 use App\Models\CalendarEvent;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class BookingController extends Controller
     // 予約一覧の取得
     public function index()
     {
-        return Booking::with(['participants', 'status'])->get();
+        return Booking::with(['participants', 'status', 'room'])->get();
     }
 
     // 予約を作成
@@ -90,6 +91,7 @@ class BookingController extends Controller
             'status_id'              => 'sometimes|required|exists:booking_statuses,id',
             'participants'           => 'sometimes|array|min:1',
             'participants.*.user_id' => 'exists:users,id',
+            'event_title'            => 'required|max:30',
         ]);
 
         // トランザクション処理
@@ -103,10 +105,10 @@ class BookingController extends Controller
 
             DB::transaction(function () use ($request, $booking, $status_id_before, $start_time_before, $end_time_before) {
                 // 予約情報の更新
-                $booking->update($request->only(['room_id', 'start_time', 'end_time', 'status_id']));
+                $booking->update($request->only(['room_id', 'start_time', 'end_time', 'status_id', 'event_title']));
                 $status_id_after    = $booking->status_id;
                 $start_time_after   = $booking->start_time;
-                $end_time_after     = $booking->end_time;                
+                $end_time_after     = $booking->end_time;   
                 // 参加者の更新
                 if (isset($request->participants)) {
                     // 参加者の削除
@@ -139,13 +141,16 @@ class BookingController extends Controller
                         $calendarEvent->update([
                             'event_start'   => $start_time_after,
                             'event_end'     => $end_time_after,
+                            'event_title'   => $request->event_title,
                         ]);
+
                     } else {
                         // カレンダーイベントが存在しない場合、新規作成
                         CalendarEvent::create([
                             'booking_id'    => $booking->id,
                             'event_start'   => $start_time_after,
                             'event_end'     => $end_time_after,
+                            'event_title'   => $request->event_title,
                         ]);
                     }
                 }
@@ -164,7 +169,7 @@ class BookingController extends Controller
         try {
             $booking = Booking::findOrFail($id);
             DB::transaction(function () use ($booking) {
-                $booking->participants()->delete();
+                $booking->participant()->delete();
                 $booking->delete();
             });
 

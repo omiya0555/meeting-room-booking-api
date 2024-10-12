@@ -14,20 +14,29 @@ class CalendarEventController extends Controller
         try {
             $start = Carbon::parse($request->query('start'));
             $end = Carbon::parse($request->query('end'));
-    
-            $events = CalendarEvent::whereBetween('event_start', [$start, $end])
+
+            // CalendarEventと、そのBookingおよびRoom情報を取得
+            $events = CalendarEvent::with(['booking.room','booking.participant']) // BookingとRoomをロード
+                            ->whereBetween('event_start', [$start, $end])
                             ->orWhereBetween('event_end', [$start, $end])
                             ->get();
+
+            // イベント情報を整形して返す
             $formattedEvents = $events->map(function ($event) {
                 return [
-                    'title' => $event->event_title,
-                    'start' => $event->event_start,
-                    'end' => $event->event_end,
+                    'id'            => $event->id,
+                    'booking_id'    => $event->booking_id,
+                    'title'         => $event->event_title,
+                    'start'         => $event->event_start,
+                    'end'           => $event->event_end,
+                    'room'          => $event->booking->room->room_name, // 関連するRoomの名前
+                    'room_id'       => $event->booking->room->id, // 関連するRoomの名前
+                    'participants'  => $event->booking->participant, // 参加者情報
                 ];
             });
-    
+
             return response()->json($formattedEvents);
-    
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch events'], 500);
         }

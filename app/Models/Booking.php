@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Room;
 
 class Booking extends Model
 {
@@ -16,6 +17,9 @@ class Booking extends Model
         'end_time',
         'status_id',
         'user_id',
+        'room_name',
+        'description',
+        'capacity',
     ];
 
     // BookingとUser: 各予約は1人の申請者に属する（belongsTo）
@@ -31,7 +35,7 @@ class Booking extends Model
     }
 
     // BookingとParticipant: 各予約は複数の参加者を持つことができる
-    public function participants()
+    public function participant()
     {
         return $this->hasMany(Participant::class);
     }
